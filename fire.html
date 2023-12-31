@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fire pew</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
+    }
+
+    canvas {
+      display: none; /* Initially hidden */
+    }
+
+    #countdown {
+      position: absolute;
+      color: #fff;
+      font-size: 24px;
+    }
+
+    #happyNewYear {
+      position: absolute;
+      font-size: 36px;
+      text-align: center;
+      margin-top: -50px;
+      display: none; /* Initially hidden */
+    }
+  </style>
+</head>
+<body>
+  <canvas id="fireworksCanvas"></canvas>
+  <div id="countdown">Countdown to New Year: <span id="timer"></span></div>
+  <div id="happyNewYear">Happy New Year Mahaaal I love you mwaaa</div>
+
+  <!-- Add audio element for sound -->
+  <audio id="fireworksSound">
+    <source src="pewpew.mp3" type="audio/mp3">
+    Your browser does not support the audio element.
+  </audio>
+
+  <script>
+    window.addEventListener("resize", resizeCanvas, false);
+    window.addEventListener("DOMContentLoaded", onLoad, false);
+    document.addEventListener("click", createFireworkOnClick, false);
+
+    window.requestAnimationFrame =
+      window.requestAnimationFrame ||
+      window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame ||
+      window.oRequestAnimationFrame ||
+      window.msRequestAnimationFrame ||
+      function (callback) {
+        window.setTimeout(callback, 1000 / 60);
+      };
+
+    var canvas, ctx, w, h, particles = [], probability = 0.04,
+      xPoint, yPoint, countdown, isNewYear = false;
+
+    function onLoad() {
+      canvas = document.getElementById("fireworksCanvas");
+      ctx = canvas.getContext("2d");
+      resizeCanvas();
+
+      // Calculate time until midnight
+      var now = new Date();
+      var newYear = new Date(now.getFullYear() + 1, 0, 1); // January 1 of next year
+      countdown = Math.floor((newYear - now) / 1000); // Convert milliseconds to seconds
+
+      setInterval(updateCountdown, 1000);
+      window.requestAnimationFrame(updateWorld);
+    }
+
+    function updateCountdown() {
+      countdown--;
+      if (countdown <= 0) {
+        // Reset the countdown if it goes negative
+        var now = new Date();
+        var newYear = new Date(now.getFullYear() + 1, 0, 1); // January 1 of next year
+        countdown = Math.floor((newYear - now) / 1000); // Convert milliseconds to seconds
+
+        // Display fireworks and "Happy New Year!" when the countdown ends
+        isNewYear = true;
+        document.getElementById("happyNewYear").style.display = "block";
+        document.getElementById("fireworksCanvas").style.display = "block";
+        document.getElementById("countdown").style.display = "none"; // Hide countdown
+
+        // Play the fireworks sound
+        var fireworksSound = document.getElementById("fireworksSound");
+        fireworksSound.play();
+      }
+      document.getElementById("timer").innerText = formatTime(countdown);
+    }
+
+    function formatTime(seconds) {
+      var hours = Math.floor(seconds / 3600);
+      var minutes = Math.floor((seconds % 3600) / 60);
+      var remainingSeconds = seconds % 60;
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    }
+
+    function resizeCanvas() {
+      if (!!canvas) {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+    }
+
+    function updateWorld() {
+      update();
+      paint();
+      window.requestAnimationFrame(updateWorld);
+    }
+
+    function update() {
+      if (isNewYear) {
+        // Generate continuous fireworks after New Year celebration
+        if (particles.length < 5000 && Math.random() < probability) {
+          createFirework();
+        }
+      }
+
+      var alive = [];
+      for (var i = 0; i < particles.length; i++) {
+        if (particles[i].move()) {
+          alive.push(particles[i]);
+        }
+      }
+      particles = alive;
+    }
+
+    function paint() {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'lighter';
+      for (var i = 0; i < particles.length; i++) {
+        particles[i].draw(ctx);
+      }
+    }
+
+    function createFireworkOnClick(event) {
+      if (!isNewYear) {
+        // If it's not New Year yet, create a firework at the click position
+        xPoint = event.clientX;
+        yPoint = event.clientY;
+
+        for (var i = 0; i < 100; i++) {
+          var particle = new Particle();
+          particle.color = getRandomColor();
+          particles.push(particle);
+        }
+      }
+    }
+
+    function createFirework() {
+      xPoint = Math.random() * (w - 200) + 100;
+      yPoint = Math.random() * (h - 200) + 100;
+      var nFire = Math.random() * 50 + 100;
+      var c = getRandomColor();
+      for (var i = 0; i < nFire; i++) {
+        var particle = new Particle();
+        particle.color = c;
+        var vy = Math.sqrt(25 - particle.vx * particle.vx);
+        if (Math.abs(particle.vy) > vy) {
+          particle.vy = particle.vy > 0 ? vy : -vy;
+        }
+        particles.push(particle);
+      }
+    }
+
+    function Particle() {
+      this.w = this.h = Math.random() * 4 + 1;
+
+      this.x = xPoint - this.w / 2;
+      this.y = yPoint - this.h / 2;
+
+      this.vx = (Math.random() - 0.5) * 10;
+      this.vy = (Math.random() - 0.5) * 10;
+
+      this.alpha = Math.random() * .5 + .5;
+
+      this.color;
+    }
+
+    Particle.prototype = {
+      gravity: 0.05,
+      move: function () {
+        this.x += this.vx;
+        this.vy += this.gravity;
+        this.y += this.vy;
+        this.alpha -= 0.01;
+        if (this.x <= -this.w || this.x >= w ||
+          this.y >= h ||
+          this.alpha <= 0) {
+          // Reset particle position for infinite fireworks
+          this.x = xPoint - this.w / 2;
+          this.y = yPoint - this.h / 2;
+          return true;
+        }
+        return true;
+      },
+      draw: function (c) {
+        c.save();
+        c.beginPath();
+
+        c.translate(this.x + this.w / 2, this.y + this.h / 2);
+        c.arc(0, 0, this.w, 0, Math.PI * 2);
+        c.fillStyle = this.color;
+        c.globalAlpha = this.alpha;
+
+        c.closePath();
+        c.fill();
+        c.restore();
+      }
+    }
+
+    function getRandomColor() {
+      return "rgb(" + (~~(Math.random() * 200 + 55)) + ","
+        + (~~(Math.random() * 200 + 55)) + "," + (~~(Math.random() * 200 + 55)) + ")";
+    }
+  </script>
+</body>
+</html>
